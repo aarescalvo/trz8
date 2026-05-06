@@ -60,26 +60,96 @@ function normalize(s: string): string {
     .trim()
 }
 
+/** Calcular similitud Jaro entre dos strings normalizados (0 a 1). */
+function jaroSimilarity(s1: string, s2: string): number {
+  if (s1 === s2) return 1
+  if (!s1 || !s2) return 0
+
+  const len1 = s1.length
+  const len2 = s2.length
+  const matchDistance = Math.max(Math.floor(Math.max(len1, len2) / 2) - 1, 0)
+
+  const s1Matches = new Array(len1).fill(false)
+  const s2Matches = new Array(len2).fill(false)
+
+  let matches = 0
+  let transpositions = 0
+
+  for (let i = 0; i < len1; i++) {
+    const start = Math.max(0, i - matchDistance)
+    const end = Math.min(i + matchDistance + 1, len2)
+    for (let j = start; j < end; j++) {
+      if (s2Matches[j] || s1[i] !== s2[j]) continue
+      s1Matches[i] = true
+      s2Matches[j] = true
+      matches++
+      break
+    }
+  }
+
+  if (matches === 0) return 0
+
+  let k = 0
+  for (let i = 0; i < len1; i++) {
+    if (!s1Matches[i]) continue
+    while (!s2Matches[k]) k++
+    if (s1[i] !== s2[k]) transpositions++
+    k++
+  }
+
+  return (
+    (matches / len1 +
+      matches / len2 +
+      (matches - transpositions / 2) / matches) /
+    3
+  )
+}
+
 function findCliente(
   clientes: { id: string; nombre: string; cuit: string | null }[],
   cuit?: string | null,
   nombre?: string | null,
 ): { id: string } | undefined {
+  // 1) Búsqueda exacta por CUIT
   if (cuit) {
     const byCuit = clientes.find((c) => c.cuit === cuit)
     if (byCuit) return byCuit
   }
-  if (nombre) {
-    const norm = normalize(nombre)
-    const match = clientes.find((c) => normalize(c.nombre).includes(norm) || norm.includes(normalize(c.nombre)))
-    if (match) return match
-    const firstPart = nombre.split(' ')[0]
-    if (firstPart.length > 3) {
-      const normFirst = normalize(firstPart)
-      const match2 = clientes.find((c) => normalize(c.nombre).includes(normFirst) || normFirst.includes(normalize(c.nombre)))
-      if (match2) return match2
+  if (!nombre) return undefined
+
+  const norm = normalize(nombre)
+
+  // 2) Contención directa (substring) — funciona para "MORAGA" ⊂ "MORAGAMAXIMILIANO"
+  const directMatch = clientes.find((c) => {
+    const cn = normalize(c.nombre)
+    return cn.includes(norm) || norm.includes(cn)
+  })
+  if (directMatch) return directMatch
+
+  // 3) Similitud Jaro ≥ 0.80 — maneja "BOSQUE AMADO" vs "BOSQUES AMADOS", "FERREYRA RUBEN" vs "FERREYRA MARTIN"
+  //    (intencionalmente bajamos a 0.80 para capturar más, pero descartamos falsos como FERREYRA→RUFFINI)
+  let bestMatch: { id: string } | undefined
+  let bestScore = 0.80
+  for (const c of clientes) {
+    const score = jaroSimilarity(norm, normalize(c.nombre))
+    if (score > bestScore) {
+      bestScore = score
+      bestMatch = c
     }
   }
+  if (bestMatch) return bestMatch
+
+  // 4) Primera palabra como apellido/familia (≥4 chars) — "FERREYRA" matchea con "FERREYRA MARTIN"
+  const firstPart = nombre.split(' ')[0]
+  if (firstPart.length > 3) {
+    const normFirst = normalize(firstPart)
+    const familyMatch = clientes.find((c) => {
+      const cn = normalize(c.nombre)
+      return cn.includes(normFirst) || normFirst.includes(cn)
+    })
+    if (familyMatch) return familyMatch
+  }
+
   return undefined
 }
 
