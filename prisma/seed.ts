@@ -139,17 +139,6 @@ function findCliente(
   }
   if (bestMatch) return bestMatch
 
-  // 4) Primera palabra como apellido/familia (≥4 chars) — "FERREYRA" matchea con "FERREYRA MARTIN"
-  const firstPart = nombre.split(' ')[0]
-  if (firstPart.length > 3) {
-    const normFirst = normalize(firstPart)
-    const familyMatch = clientes.find((c) => {
-      const cn = normalize(c.nombre)
-      return cn.includes(normFirst) || normFirst.includes(cn)
-    })
-    if (familyMatch) return familyMatch
-  }
-
   return undefined
 }
 
@@ -507,6 +496,79 @@ async function main() {
       logOk('Clientes creados', clientes.length)
     } catch (e) {
       logErr('Error creando clientes', e)
+    }
+
+    // ═══ PASO 6b: Auto-crear clientes faltantes desde tropas.json ═══
+    //    Escanea productores y usuarios de faena de las tropas y crea los clientes que no existan
+    logHeader('6b️⃣ Auto-crear clientes faltantes desde tropas')
+    try {
+      const tropasData = readJsonFile<{
+        productorNombre: string | null; productorCuit: string | null;
+        usuarioFaenaNombre: string | null;
+      }>('tropas.json')
+
+      const aCrear = new Map<string, { nombre: string; cuit: string | null; esProductor: boolean; esUsuarioFaena: boolean }>()
+      for (const t of tropasData) {
+        if (t.productorNombre) {
+          const existing = findCliente(clientes, t.productorCuit, t.productorNombre)
+          if (!existing) {
+            aCrear.set(normalize(t.productorNombre), {
+              nombre: t.productorNombre.trim(),
+              cuit: t.productorCuit || null,
+              esProductor: true,
+              esUsuarioFaena: false,
+            })
+          }
+        }
+        if (t.usuarioFaenaNombre) {
+          const existing = findCliente(clientes, null, t.usuarioFaenaNombre)
+          if (!existing) {
+            const key = `UF_${normalize(t.usuarioFaenaNombre)}`
+            if (!aCrear.has(key)) {
+              aCrear.set(key, {
+                nombre: t.usuarioFaenaNombre.trim(),
+                cuit: null,
+                esProductor: false,
+                esUsuarioFaena: true,
+              })
+            }
+          }
+        }
+      }
+
+      if (aCrear.size > 0) {
+        console.log(`  📋 ${aCrear.size} clientes faltantes detectados, creando...`)
+        for (const [, data] of aCrear) {
+          try {
+            const created = await prisma.cliente.create({
+              data: {
+                nombre: data.nombre,
+                cuit: data.cuit ?? undefined,
+                esProductor: data.esProductor,
+                esUsuarioFaena: data.esUsuarioFaena,
+                activo: true,
+                observaciones: 'Creado automáticamente desde datos de tropas',
+              },
+            })
+            clientes.push({
+              id: created.id,
+              nombre: created.nombre,
+              cuit: created.cuit,
+              esProductor: created.esProductor,
+              esUsuarioFaena: created.esUsuarioFaena,
+            })
+          } catch (err) {
+            const errMsg = err instanceof Error ? err.message : String(err)
+            console.warn(`  ⚠️  No se pudo crear cliente auto: ${data.nombre} — ${errMsg}`)
+          }
+        }
+        logOk('Clientes auto-creados', aCrear.size)
+      } else {
+        console.log('  ✅ Todos los productores/usuarios de faena ya existen')
+      }
+      logOk('Total clientes disponibles', clientes.length)
+    } catch (e) {
+      logErr('Error auto-creando clientes desde tropas', e)
     }
 
     // Cliente por defecto para relaciones que no coincidan
