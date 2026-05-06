@@ -415,7 +415,7 @@ async function main() {
             esUsuarioFaena: created.esUsuarioFaena,
           })
         } catch (err) {
-          console.warn(`  ⚠️  No se pudo crear cliente: ${c.nombre} (${c.cuit})`)
+          console.warn(`  ⚠️  No se pudo crear cliente: ${c.nombre} (${c.cuit}) — ${(err as Error).message}`)
         }
       }
       logOk('Clientes creados', clientes.length)
