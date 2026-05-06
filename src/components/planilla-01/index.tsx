@@ -75,12 +75,18 @@ export function Planilla01Module({ operador }: Props) {
       const res = await fetch(url)
       const data = await res.json()
       if (data.success) {
-        setTropas(data.data)
+        setTropas(data.data || [])
         setMostrarTodas(false)
+        if (!data.data?.length) {
+          toast.info(termino ? `No se encontraron tropas para "${termino}"` : 'No hay tropas cargadas. Ejecutá el seed primero.')
+        }
+      } else {
+        console.error('API Error:', data.error)
+        toast.error(`Error: ${data.error || 'Sin respuesta del servidor'}`)
       }
     } catch (error) {
       console.error('Error:', error)
-      toast.error('Error al cargar tropas')
+      toast.error('Error de conexión al cargar tropas')
     } finally {
       setLoading(false)
       setBuscando(false)
