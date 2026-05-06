@@ -88,10 +88,21 @@ function findCliente(
 async function limpiarBaseDeDatos() {
   logHeader('🗑️  LIMPIEZA TOTAL - Eliminando TODOS los datos existentes')
 
+  // Detectar si es PostgreSQL o SQLite por la URL de conexión
+  const dbUrl = process.env.DATABASE_URL || ''
+  const isPostgres = dbUrl.includes('postgresql') || dbUrl.includes('postgres')
+
   try {
-    // Desactivar restricciones de FK para SQLite
-    await prisma.$executeRawUnsafe('PRAGMA foreign_keys = OFF')
-    console.log('  ⚙️  Foreign keys desactivadas')
+    if (isPostgres) {
+      console.log('  ⚙️  Base de datos: PostgreSQL')
+      // Desactivar FK en PostgreSQL
+      await prisma.$executeRawUnsafe('SET session_replication_role = \'replica\'')
+      console.log('  ⚙️  Foreign keys desactivadas')
+    } else {
+      console.log('  ⚙️  Base de datos: SQLite')
+      await prisma.$executeRawUnsafe('PRAGMA foreign_keys = OFF')
+      console.log('  ⚙️  Foreign keys desactivadas')
+    }
 
     // Tablas con datos que dependen de otras (orden inverso de dependencias)
     const tablas = [
@@ -197,19 +208,41 @@ async function limpiarBaseDeDatos() {
       'ConfiguracionFrigorifico',
     ]
 
-    for (const tabla of tablas) {
+    if (isPostgres) {
+      // En PostgreSQL usar TRUNCATE CASCADE (más rápido y limpio)
+      const allTables = tablas.map(t => `"${t}"`).join(', ')
       try {
-        const result = await prisma.$executeRawUnsafe(`DELETE FROM "${tabla}"`)
-        console.log(`  🗑️  ${tabla}: OK`)
+        await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${allTables} CASCADE`)
+        console.log('  ✅ TRUNCATE CASCADE ejecutado en todas las tablas')
       } catch (e) {
-        // Si la tabla no existe, ignorar
-        console.log(`  ⏭️  ${tabla}: saltada (no existe)`)
+        // Si falla, hacer DELETE individual
+        console.log('  ⚠️  TRUNCATE falló, usando DELETE individual...')
+        for (const tabla of tablas) {
+          try {
+            await prisma.$executeRawUnsafe(`DELETE FROM "${tabla}"`)
+            console.log(`  🗑️  ${tabla}: OK`)
+          } catch (e2) {
+            console.log(`  ⏭️  ${tabla}: saltada`)
+          }
+        }
       }
+      // Reactivar FK
+      await prisma.$executeRawUnsafe('SET session_replication_role = \'DEFAULT\'')
+      console.log('  ⚙️  Foreign keys reactivadas')
+    } else {
+      // SQLite: DELETE individual
+      for (const tabla of tablas) {
+        try {
+          await prisma.$executeRawUnsafe(`DELETE FROM "${tabla}"`)
+          console.log(`  🗑️  ${tabla}: OK`)
+        } catch (e) {
+          console.log(`  ⏭️  ${tabla}: saltada (no existe)`)
+        }
+      }
+      await prisma.$executeRawUnsafe('PRAGMA foreign_keys = ON')
+      console.log('  ⚙️  Foreign keys reactivadas')
     }
 
-    // Reactivar FK
-    await prisma.$executeRawUnsafe('PRAGMA foreign_keys = ON')
-    console.log('  ⚙️  Foreign keys reactivadas')
     console.log('  ✅ Base de datos limpiada completamente')
   } catch (error) {
     console.error('  ❌ Error durante la limpieza:', error)
