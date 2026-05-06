@@ -126,10 +126,10 @@ function findCliente(
   })
   if (directMatch) return directMatch
 
-  // 3) Similitud Jaro ≥ 0.80 — maneja "BOSQUE AMADO" vs "BOSQUES AMADOS", "FERREYRA RUBEN" vs "FERREYRA MARTIN"
-  //    (intencionalmente bajamos a 0.80 para capturar más, pero descartamos falsos como FERREYRA→RUFFINI)
+  // 3) Similitud Jaro ≥ 0.85 — maneja "BOSQUE AMADO" vs "BOSQUES AMADOS" (0.89)
+  //    El umbral 0.85 evita falsos positivos como FERREYRA RUBEN → FERREYRA MARTIN (0.83)
   let bestMatch: { id: string } | undefined
-  let bestScore = 0.80
+  let bestScore = 0.85
   for (const c of clientes) {
     const score = jaroSimilarity(norm, normalize(c.nombre))
     if (score > bestScore) {

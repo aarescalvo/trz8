@@ -40,6 +40,16 @@
     "esUsuarioFaena": false
   },
   {
+    "id": "cli-004b",
+    "nombre": "FERREYRA RUBEN",
+    "cuit": null,
+    "email": null,
+    "telefono": null,
+    "contacto": null,
+    "esProductor": false,
+    "esUsuarioFaena": true
+  },
+  {
     "id": "cli-005",
     "nombre": "FERREYRA MARTIN",
     "cuit": "23-33532135-9",
