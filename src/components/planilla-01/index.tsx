@@ -58,22 +58,47 @@ export function Planilla01Module({ operador }: Props) {
   const [tropas, setTropas] = useState<Tropa[]>([])
   const [tropaSeleccionada, setTropaSeleccionada] = useState<Tropa | null>(null)
   const [loading, setLoading] = useState(true)
+  const [buscando, setBuscando] = useState(false)
   const [generando, setGenerando] = useState<'excel' | 'pdf' | null>(null)
   const [busqueda, setBusqueda] = useState('')
+  const [mostrarTodas, setMostrarTodas] = useState(false)
 
-  useEffect(() => { fetchTropas() }, [])
+  useEffect(() => { fetchTropas('') }, [])
 
-  const fetchTropas = async () => {
+  const fetchTropas = async (termino: string) => {
+    if (termino) setBuscando(true)
+    else setLoading(true)
     try {
-      const res = await fetch('/api/tropas')
+      const params = new URLSearchParams()
+      if (termino) params.set('busqueda', termino)
+      const url = `/api/tropas${params.toString() ? '?' + params.toString() : ''}`
+      const res = await fetch(url)
       const data = await res.json()
-      if (data.success) setTropas(data.data)
+      if (data.success) {
+        setTropas(data.data)
+        setMostrarTodas(false)
+      }
     } catch (error) {
       console.error('Error:', error)
       toast.error('Error al cargar tropas')
     } finally {
       setLoading(false)
+      setBuscando(false)
     }
+  }
+
+  const handleBuscar = () => {
+    if (busqueda.trim()) {
+      fetchTropas(busqueda.trim())
+    } else {
+      fetchTropas('')
+    }
+  }
+
+  const handleVerTodas = () => {
+    setBusqueda('')
+    fetchTropas('')
+    setMostrarTodas(true)
   }
 
   const handleSeleccionarTropa = async (tropaId: string) => {
@@ -235,13 +260,7 @@ export function Planilla01Module({ operador }: Props) {
     }
   }
 
-  const tropasFiltradas = tropas.filter(t => {
-    if (!busqueda) return true
-    const search = busqueda.toLowerCase()
-    return t.codigo.toLowerCase().includes(search) || 
-           t.productor?.nombre?.toLowerCase().includes(search) ||
-           t.usuarioFaena?.nombre?.toLowerCase().includes(search)
-  })
+  // Las tropas ya vienen filtradas desde el servidor cuando hay búsqueda
 
   const getSemana = (fecha: string) => {
     const d = new Date(fecha)
@@ -285,21 +304,41 @@ export function Planilla01Module({ operador }: Props) {
                 <CardTitle className="text-lg">
                   <TextoEditable id="planilla01-seleccionar-tropa" original="Seleccionar Tropa" tag="span" />
                 </CardTitle>
-                <div className="relative mt-2">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-                  <Input placeholder="Buscar..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className="pl-9" />
+                <div className="flex gap-2 mt-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                    <Input 
+                      placeholder="Código, productor, CUIT..." 
+                      value={busqueda} 
+                      onChange={(e) => setBusqueda(e.target.value)} 
+                      className="pl-9"
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleBuscar() }}
+                    />
+                  </div>
+                  <Button onClick={handleBuscar} disabled={buscando} className="bg-amber-600 hover:bg-amber-700 shrink-0">
+                    {buscando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                    <TextoEditable id="planilla01-btn-buscar" original="Buscar" tag="span" />
+                  </Button>
                 </div>
+                {busqueda && !mostrarTodas && (
+                  <button 
+                    onClick={handleVerTodas} 
+                    className="text-xs text-amber-600 hover:text-amber-800 mt-1 underline"
+                  >
+                    Ver todas las tropas
+                  </button>
+                )}
               </CardHeader>
               <CardContent className="p-0 max-h-[500px] overflow-y-auto">
                 {loading ? (
                   <div className="p-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-amber-500" /></div>
-                ) : tropasFiltradas.length === 0 ? (
+                ) : tropas.length === 0 ? (
                   <div className="p-8 text-center text-stone-400">
                     <TextoEditable id="planilla01-no-hay-tropas" original="No hay tropas" tag="span" />
                   </div>
                 ) : (
                   <div className="divide-y">
-                    {tropasFiltradas.map((tropa) => (
+                    {tropas.map((tropa) => (
                       <button key={tropa.id} onClick={() => handleSeleccionarTropa(tropa.id)}
                         className={`w-full p-4 text-left hover:bg-stone-50 transition-colors ${tropaSeleccionada?.id === tropa.id ? 'bg-amber-50 border-l-4 border-amber-500' : ''}`}>
                         <div className="flex items-center justify-between">

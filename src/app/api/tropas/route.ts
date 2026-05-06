@@ -17,8 +17,21 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const estadoParam = searchParams.get('estado')
     const especie = searchParams.get('especie')
+    const busqueda = searchParams.get('busqueda')?.trim()
     
     const where: Record<string, unknown> = {}
+
+    // Búsqueda por texto (código, productor, usuario faena)
+    if (busqueda) {
+      where.OR = [
+        { codigo: { contains: busqueda, mode: 'insensitive' } },
+        { codigoSimplificado: { contains: busqueda, mode: 'insensitive' } },
+        { productor: { nombre: { contains: busqueda, mode: 'insensitive' } } },
+        { productor: { cuit: { contains: busqueda, mode: 'insensitive' } } },
+        { usuarioFaena: { nombre: { contains: busqueda, mode: 'insensitive' } } },
+        { usuarioFaena: { cuit: { contains: busqueda, mode: 'insensitive' } } },
+      ]
+    }
 
     // Manejar estados múltiples separados por coma
     if (estadoParam && estadoParam !== 'todos') {
