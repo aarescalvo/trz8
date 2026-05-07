@@ -138,5 +138,15 @@
     "contacto": "AGUSTIN RUFFINI",
     "esProductor": false,
     "esUsuarioFaena": false
+  },
+  {
+    "id": "cli-015",
+    "nombre": "FERREYRA PAOLA ANDREA",
+    "cuit": "27-29287814-7",
+    "email": "",
+    "telefono": "",
+    "contacto": "",
+    "esProductor": false,
+    "esUsuarioFaena": true
   }
 ]
