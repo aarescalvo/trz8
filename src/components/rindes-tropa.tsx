@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { 
   TrendingUp, TrendingDown, BarChart3, Filter, RefreshCw, 
   Eye, X, ChevronDown, ChevronUp, AlertCircle, Target,
-  Search, FileSpreadsheet, FileText, Download
+  Search, FileSpreadsheet, FileText
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from '@/components/ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { ExcelExporter } from '@/lib/export-excel'
 import { PDFExporter } from '@/lib/export-pdf'
@@ -61,6 +62,11 @@ interface TropaDetalle {
   usuarioFaena: { nombre: string } | null
 }
 
+interface OpcionFiltro {
+  id: string
+  nombre: string
+}
+
 interface Operador {
   id: string
   nombre: string
@@ -72,6 +78,11 @@ function RindesTropaModule({ operador }: { operador: Operador }) {
   const [loading, setLoading] = useState(true)
   const [rindes, setRindes] = useState<RindeTropa[]>([])
   const [estadisticas, setEstadisticas] = useState<EstadisticasGenerales | null>(null)
+  
+  // Opciones de dropdown
+  const [opcionesLoading, setOpcionesLoading] = useState(true)
+  const [usuarios, setUsuarios] = useState<OpcionFiltro[]>([])
+  const [productores, setProductores] = useState<OpcionFiltro[]>([])
   
   // Filtros
   const [fechaDesde, setFechaDesde] = useState('')
@@ -105,7 +116,23 @@ function RindesTropaModule({ operador }: { operador: Operador }) {
     }
   } | null>(null)
 
-  // Carga inicial
+  // Cargar opciones de dropdown
+  const fetchOpciones = useCallback(async () => {
+    try {
+      const res = await fetch('/api/rindes?accion=opciones')
+      const data = await res.json()
+      if (data.success) {
+        setUsuarios(data.data.usuarios)
+        setProductores(data.data.productores)
+      }
+    } catch {
+      // silently fail - dropdowns will be empty
+    } finally {
+      setOpcionesLoading(false)
+    }
+  }, [])
+
+  // Cargar datos principales
   const fetchRindes = useCallback(async () => {
     setLoading(true)
     try {
@@ -114,8 +141,8 @@ function RindesTropaModule({ operador }: { operador: Operador }) {
       if (fechaHasta) params.append('fechaHasta', fechaHasta)
       if (tropaDesde) params.append('tropaDesde', tropaDesde)
       if (tropaHasta) params.append('tropaHasta', tropaHasta)
-      if (usuario) params.append('usuario', usuario)
-      if (proveedor) params.append('proveedor', proveedor)
+      if (usuario && usuario !== '___todos___') params.append('usuario', usuario)
+      if (proveedor && proveedor !== '___todos___') params.append('proveedor', proveedor)
 
       const res = await fetch(`/api/rindes?${params.toString()}`)
       const data = await res.json()
@@ -134,9 +161,13 @@ function RindesTropaModule({ operador }: { operador: Operador }) {
   }, [fechaDesde, fechaHasta, tropaDesde, tropaHasta, usuario, proveedor])
 
   // Cargar al montar
-  useState(() => {
+  useEffect(() => {
+    fetchOpciones()
+  }, [fetchOpciones])
+
+  useEffect(() => {
     fetchRindes()
-  })
+  }, [fetchRindes])
 
   const handleBuscar = () => {
     fetchRindes()
@@ -149,10 +180,6 @@ function RindesTropaModule({ operador }: { operador: Operador }) {
     setTropaHasta('')
     setUsuario('')
     setProveedor('')
-    // Limpia y recarga sin filtros
-    setTimeout(() => {
-      fetchRindes()
-    }, 0)
   }
 
   const fetchDetalleTropa = async (tropaCodigo: string) => {
@@ -243,7 +270,6 @@ function RindesTropaModule({ operador }: { operador: Operador }) {
       r.rindeMaximo > 0 ? r.rindeMaximo.toFixed(2) : '-',
     ])
 
-    // Agregar fila de totales
     if (estadisticas) {
       data.push([
         '', 'TOTALES', '', estadisticas.totalAnimales,
@@ -304,7 +330,6 @@ function RindesTropaModule({ operador }: { operador: Operador }) {
       r.rinde ? (r.rinde * 100).toFixed(2) : '-',
     ])
 
-    // Agregar fila de totales
     const stats = tropaDetalle.estadisticas
     data.push([
       '', 'TOTALES', '', 
@@ -351,7 +376,7 @@ function RindesTropaModule({ operador }: { operador: Operador }) {
     toast.success('Exportación PDF del detalle iniciada')
   }
 
-  const tieneFiltrosActivos = fechaDesde || fechaHasta || tropaDesde || tropaHasta || usuario || proveedor
+  const tieneFiltrosActivos = fechaDesde || fechaHasta || tropaDesde || tropaHasta || (usuario && usuario !== '___todos___') || (proveedor && proveedor !== '___todos___')
 
   return (
     <div className="space-y-6">
@@ -399,7 +424,7 @@ function RindesTropaModule({ operador }: { operador: Operador }) {
       {mostrarFiltros && (
         <Card className="border-0 shadow-md">
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Fecha Desde</Label>
                 <Input
@@ -440,21 +465,35 @@ function RindesTropaModule({ operador }: { operador: Operador }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <div className="space-y-2">
                 <Label>Usuario Faena</Label>
-                <Input
-                  type="text"
-                  placeholder="Buscar por nombre de usuario..."
-                  value={usuario}
-                  onChange={(e) => setUsuario(e.target.value)}
-                />
+                <Select value={usuario} onValueChange={setUsuario}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todos los usuarios..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="___todos___">Todos los usuarios</SelectItem>
+                    {usuarios.map(u => (
+                      <SelectItem key={u.id} value={u.nombre}>
+                        {u.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Productor</Label>
-                <Input
-                  type="text"
-                  placeholder="Buscar por nombre de productor..."
-                  value={proveedor}
-                  onChange={(e) => setProveedor(e.target.value)}
-                />
+                <Select value={proveedor} onValueChange={setProveedor}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todos los productores..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="___todos___">Todos los productores</SelectItem>
+                    {productores.map(p => (
+                      <SelectItem key={p.id} value={p.nombre}>
+                        {p.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="flex gap-2 mt-4 justify-end">
@@ -633,10 +672,10 @@ function RindesTropaModule({ operador }: { operador: Operador }) {
                       <TableCell className="font-medium">
                         {rinde.tropaCodigo}
                       </TableCell>
-                      <TableCell className="text-sm text-stone-600 max-w-[150px] truncate">
+                      <TableCell className="text-sm text-stone-600 max-w-[150px] truncate" title={rinde.productor || ''}>
                         {rinde.productor || '-'}
                       </TableCell>
-                      <TableCell className="text-sm text-stone-600 max-w-[150px] truncate">
+                      <TableCell className="text-sm text-stone-600 max-w-[150px] truncate" title={rinde.usuario || ''}>
                         {rinde.usuario || '-'}
                       </TableCell>
                       <TableCell className="text-center">
@@ -698,7 +737,6 @@ function RindesTropaModule({ operador }: { operador: Operador }) {
                 )}
               </div>
             </DialogDescription>
-            {/* Botones de exportación en el detalle */}
             {tropaDetalle && !detalleLoading && (
               <div className="flex gap-2 mt-2">
                 <Button variant="outline" size="sm" onClick={exportDetalleExcel}>

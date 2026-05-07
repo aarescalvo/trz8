@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 
-// GET - Obtener rindes por tropa
+// GET - Obtener rindes por tropa / opciones de filtro
 import { checkPermission } from '@/lib/auth-helpers'
 export async function GET(request: NextRequest) {
   const authError = await checkPermission(request, 'puedeRomaneo')
@@ -17,6 +17,32 @@ export async function GET(request: NextRequest) {
     const tropaHasta = searchParams.get('tropaHasta')
     const usuario = searchParams.get('usuario')
     const proveedor = searchParams.get('proveedor')
+    const accion = searchParams.get('accion')
+
+    // Devolver opciones de filtro (dropdowns)
+    if (accion === 'opciones') {
+      const [usuarios, productores] = await Promise.all([
+        db.tropa.findMany({
+          select: { usuarioFaenaId: true, usuarioFaena: { select: { id: true, nombre: true } } },
+          distinct: ['usuarioFaenaId'],
+          orderBy: { usuarioFaena: { nombre: 'asc' } },
+        }),
+        db.tropa.findMany({
+          where: { productorId: { not: null } },
+          select: { productorId: true, productor: { select: { id: true, nombre: true } } },
+          distinct: ['productorId'],
+          orderBy: { productor: { nombre: 'asc' } },
+        }),
+      ])
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          usuarios: usuarios.map(u => ({ id: u.usuarioFaena.id, nombre: u.usuarioFaena.nombre })),
+          productores: productores.map(p => ({ id: p.productor!.id, nombre: p.productor!.nombre })),
+        }
+      })
+    }
 
     // Si se solicita una tropa específica, devolver detalle
     if (tropaId) {
