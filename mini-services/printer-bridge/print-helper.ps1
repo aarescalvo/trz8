@@ -3,10 +3,11 @@
     Helper para enviar datos RAW a impresora Windows.
     Usado por Printer Bridge (index.js).
 
-    Estrategia en 3 pasos:
-    1) Win32 Spooler API con RAW (StartDocPrinter) - Zebra
-    2) Win32 Spooler: OpenPrinter + WritePrinter directo (sin StartDocPrinter) - Datamax
-    3) Si ambos fallan, indica instalar driver Generic/Text Only
+    Estrategia en 4 pasos:
+    1) StartDocPrinter con datatype "RAW" - Zebra y compatibles
+    2) StartDocPrinter con datatype null (dejar que Windows elija) - Datamax/Win10
+    3) OpenPrinter con PRINTER_DEFAULTS + datatype RAW + WritePrinter
+    4) Comando `print` de Windows como ultimo recurso
 
 .PARAMETER PrinterName
     Nombre exacto de la impresora en Windows.
@@ -55,8 +56,19 @@ public class SpoolerRaw
         public string pDatatype;
     }
 
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct PRINTER_DEFAULTS
+    {
+        public int pDatatype;
+        public int pDevMode;
+        public int DesiredAccess;
+    }
+
     [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+
+    [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, ref PRINTER_DEFAULTS pDefault);
 
     [DllImport("winspool.drv", SetLastError = true)]
     public static extern bool StartDocPrinter(IntPtr hPrinter, int Level, ref DOC_INFO_1 pDocInfo);
@@ -89,16 +101,15 @@ public class SpoolerRaw
 }
 
 # ============================================================
-# Metodo 1: Spooler completo (Open + StartDoc + StartPage + Write + End)
-# Funciona con Zebra y drivers que soportan RAW
+# Metodo 1: Spooler con datatype "RAW"
 # ============================================================
-function Print-viaSpoolerFull {
-    param([string]$Printer, [byte[]]$Bytes)
+function Print-TryRaw {
+    param([string]$Printer, [byte[]]$Bytes, [string]$Datatype)
 
     $docInfo = New-Object SpoolerRaw+DOC_INFO_1
     $docInfo.pDocName = "PrinterBridge"
     $docInfo.pOutputFile = $null
-    $docInfo.pDatatype = "RAW"
+    $docInfo.pDatatype = $Datatype
 
     $hPrinter = [IntPtr]::Zero
 
@@ -145,29 +156,53 @@ function Print-viaSpoolerFull {
 }
 
 # ============================================================
-# Metodo 2: OpenPrinter + WritePrinter directo (sin StartDoc)
-# Para drivers Datamax que no soportan datatype RAW (error 1804)
-# WritePrinter envia bytes raw sin validar datatype
+# Metodo 3: OpenPrinter con PRINTER_DEFAULTS forzando RAW
 # ============================================================
-function Print-viaWriteDirect {
+function Print-TryDefaults {
     param([string]$Printer, [byte[]]$Bytes)
+
+    $defaults = New-Object SpoolerRaw+PRINTER_DEFAULTS
+    $defaults.DesiredAccess = 0  # PRINTER_ACCESS_USE
 
     $hPrinter = [IntPtr]::Zero
 
-    $result = [SpoolerRaw]::OpenPrinter($Printer, [ref]$hPrinter, [IntPtr]::Zero)
+    $result = [SpoolerRaw]::OpenPrinter($Printer, [ref]$hPrinter, [ref]$defaults)
     if (-not $result) {
         $errCode = [SpoolerRaw]::GetLastError()
         throw "OpenPrinter codigo:$errCode"
     }
 
+    $docInfo = New-Object SpoolerRaw+DOC_INFO_1
+    $docInfo.pDocName = "PrinterBridge"
+    $docInfo.pOutputFile = $null
+    $docInfo.pDatatype = $null
+
     try {
         $written = 0
+
+        $result = [SpoolerRaw]::StartDocPrinter($hPrinter, 1, [ref]$docInfo)
+        if (-not $result) {
+            $errCode = [SpoolerRaw]::GetLastError()
+            throw "StartDocPrinter codigo:$errCode"
+        }
+
+        $result = [SpoolerRaw]::StartPagePrinter($hPrinter)
+        if (-not $result) {
+            $errCode = [SpoolerRaw]::GetLastError()
+            [SpoolerRaw]::EndDocPrinter($hPrinter) | Out-Null
+            throw "StartPagePrinter codigo:$errCode"
+        }
 
         $result = [SpoolerRaw]::WritePrinter($hPrinter, $Bytes, $Bytes.Length, [ref]$written)
         if (-not $result) {
             $errCode = [SpoolerRaw]::GetLastError()
+            [SpoolerRaw]::EndPagePrinter($hPrinter) | Out-Null
+            [SpoolerRaw]::EndDocPrinter($hPrinter) | Out-Null
             throw "WritePrinter codigo:$errCode"
         }
+
+        [SpoolerRaw]::EndPagePrinter($hPrinter) | Out-Null
+        [SpoolerRaw]::EndDocPrinter($hPrinter) | Out-Null
 
         return @{ success = $true; bytes = $written }
 
@@ -179,64 +214,45 @@ function Print-viaWriteDirect {
 }
 
 # ============================================================
-# Ejecucion principal
+# Ejecucion principal - intentar metodos en orden
 # ============================================================
+$lastError = $null
 
-# Intentar Metodo 1: Spooler completo con RAW
-$spoolerError = $null
-
+# --- Metodo 1: RAW ---
 try {
-    $result = Print-viaSpoolerFull -Printer $PrinterName -Bytes $data
-    if ($result.success) {
-        Write-Output "OK:$($result.bytes)"
+    $r = Print-TryRaw -Printer $PrinterName -Bytes $data -Datatype "RAW"
+    if ($r.success) { Write-Output "OK:$($r.bytes)"; exit 0 }
+} catch { $lastError = "RAW: $($_.Exception.Message)" }
+
+# --- Metodo 2: datatype null (Windows elige) ---
+try {
+    $r = Print-TryRaw -Printer $PrinterName -Bytes $data -Datatype $null
+    if ($r.success) { Write-Output "OK:$($r.bytes)"; exit 0 }
+} catch { $lastError = "Null: $($_.Exception.Message)" }
+
+# --- Metodo 3: PRINTER_DEFAULTS + datatype null ---
+try {
+    $r = Print-TryDefaults -Printer $PrinterName -Bytes $data
+    if ($r.success) { Write-Output "OK:$($r.bytes)"; exit 0 }
+} catch { $lastError = "Defaults: $($_.Exception.Message)" }
+
+# --- Metodo 4: comando `print` de Windows ---
+try {
+    $printOutput = & print.exe /d:"$PrinterName" $FilePath 2>&1
+    $printExit = $LASTEXITCODE
+    if ($printExit -eq 0 -or $printExit -eq $null) {
+        Write-Output "OK:$fileSize"
         exit 0
     }
-} catch {
-    $spoolerError = $_.Exception.Message
-}
+    $lastError = "print.exe: exit code $printExit"
+} catch { $lastError = "print.exe: $($_.Exception.Message)" }
 
-# Si fallo con error 1804 (datatype no soportado), intentar Metodo 2
-if ($spoolerError -match 'codigo:1804') {
-    try {
-        $result = Print-viaWriteDirect -Printer $PrinterName -Bytes $data
-        if ($result.success) {
-            Write-Output "OK:$($result.bytes)"
-            exit 0
-        }
-    } catch {
-        $directError = $_.Exception.Message
-        Write-Output "ERROR:El driver Datamax no soporta RAW (error 1804) y WritePrinter directo tambien fallo: $directError"
-        Write-Output "SOLUCION: Instala un segundo driver 'Generic / Text Only' para la misma impresora."
-        Write-Output "  1. Abrí: Dispositivos e impresoras > Agregar impresora"
-        Write-Output "  2. 'La impresora que quiero no esta en la lista'"
-        Write-Output "  3. 'Agregar una impresora local con ajustes manuales'"
-        Write-Output "  4. Usar puerto existente: USB001"
-        Write-Output "  5. Fabricante: Generic > Modelo: Generic / Text Only"
-        Write-Output "  6. Nombre: Datamax Generic (RAW)"
-        Write-Output "  7. Luego configurar el bridge con: Datamax Generic (RAW)"
-        exit 1
-    }
-} else {
-    # Error distinto de 1804
-    if ($spoolerError -match 'codigo:(\d+)') {
-        $errCode = $Matches[1]
-        $errMsg = switch ($errCode) {
-            5    { "Acceso denegado. Ejecuta el bridge como Administrador." }
-            1801 {
-                $available = (Get-Printer -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name) -join ", "
-                "Impresora '$PrinterName' no encontrada. Disponibles: $available"
-            }
-            3015 { "La impresora esta pausada. Reanudala desde Configuracion." }
-            13   { "Permiso insuficiente. Ejecuta como Administrador." }
-            2    {
-                $available = (Get-Printer -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name) -join ", "
-                "Impresora no encontrada: '$PrinterName'. Disponibles: $available"
-            }
-            default { "Error de Spooler $errCode." }
-        }
-        Write-Output "ERROR:$errMsg"
-    } else {
-        Write-Output "ERROR:$spoolerError"
-    }
-    exit 1
-}
+# Todos fallaron
+Write-Output "ERROR:Ningun metodo de impresion funciono."
+Write-Output "  Metodo 1 (RAW): $($lastError -split "`n")[0]"
+Write-Output "  Metodo 2 (null): $($lastError -split "`n")[1]"
+Write-Output "  Metodo 3 (defaults): $($lastError -split "`n")[2]"
+Write-Output "  Metodo 4 (print.exe): $($lastError -split "`n")[3]"
+Write-Output ""
+Write-Output "Verificá que la impresora este encendida, conectada y sin trabajos atascados."
+exit 1
