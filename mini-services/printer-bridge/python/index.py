@@ -821,9 +821,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     "^XZ"
                 ).format(fecha=now)
             else:
-                # Etiqueta de prueba DPL (compatible Datamax Mark II)
-                # Formato DPL basado en el sistema viejo de trazabilidad (comprobado que funciona)
-                # 19 + font(2) + estilo(2) + x(3) + y(3) + ancho(3) + alto(1) + texto
+                # Etiqueta de prueba DPL - Formato exacto del sistema viejo de trazabilidad
+                # SIN caracteres de control STX/ETX (el spooler de Windows los filtra)
                 test_data = (
                     "M1084\n"
                     "O0220\n"
@@ -834,13 +833,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     "PO\n"
                     "pG\n"
                     "SO\n"
-                    "1911A1200200010SOLEMAR ALIMENTARIA\n"
-                    "1911A1200500010** PRUEBA **\n"
-                    "1911A1200800010Printer Bridge v3.0\n"
-                    "1911A1201100010Datamax Mark II\n"
-                    "1911A1201400010" + now + "\n"
+                    "1911A1200220110SOLEMAR ALIMENTARIA\n"
+                    "1911A1200550110** PRUEBA **\n"
+                    "1911A1200880110Printer Bridge v3.0\n"
+                    "1911A1201210110Datamax Mark II\n"
+                    "1911A1201540110" + now + "\n"
                     "Q0001\n"
-                    "\x03E"
+                    "E\n"
                 )
 
             result = print_raw(printer_name, test_data)
