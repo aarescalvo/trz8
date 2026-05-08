@@ -822,8 +822,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 ).format(fecha=now)
             else:
                 # Etiqueta de prueba DPL (compatible Datamax Mark II)
+                # STX = 0x02 (inicio), ETX = 0x03 (fin) - caracteres de control reales
                 test_data = (
-                    "<STX>L\n"
+                    "\x02L\n"
                     "D11\n"
                     "H14\n"
                     "PG\n"
@@ -850,7 +851,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     "1V0190\n"
                     "2f160\n"
                     "3c0000\n"
-                    "e{fecha}\n"
+                    "e" + now + "\n"
                     "\n"
                     "1K0140\n"
                     "1V0250\n"
@@ -858,8 +859,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     "3c0000\n"
                     "eDatamax Mark II\n"
                     "\n"
-                    "E"
-                ).format(fecha=now)
+                    "\x03E"
+                )
 
             result = print_raw(printer_name, test_data)
             self.send_json(result)
