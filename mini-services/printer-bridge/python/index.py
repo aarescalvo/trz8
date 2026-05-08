@@ -128,45 +128,60 @@ def try_import_win32print():
 
 def list_printers():
     """Listar impresoras instaladas en Windows."""
+    printers = []
+
+    # METODO 1: PowerShell (mas confiable, funciona en todas las versiones de Windows)
+    try:
+        result = subprocess.check_output(
+            'powershell -NoProfile -Command "Get-WmiObject Win32_Printer | Select-Object Name,PortName,DriverName | ConvertTo-Json"',
+            shell=True, stderr=subprocess.STDOUT, timeout=10
+        )
+        data = json.loads(result.decode('mbcs', errors='replace'))
+        items = data if isinstance(data, list) else [data]
+        for p in items:
+            name = p.get('Name', '')
+            if name:
+                printers.append({
+                    'name': name,
+                    'description': p.get('DriverName', name),
+                    'port': p.get('PortName', '')
+                })
+        if printers:
+            return printers
+    except Exception as e:
+        log('debug', 'PowerShell listado fallo: {}'.format(e))
+
+    # METODO 2: win32print con nivel 4 (formato simple: pPrinterName, pPortName)
     win32print = try_import_win32print()
     if win32print:
         try:
-            printers = []
             flags = win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS
-            for printer_info in win32print.EnumPrinters(flags, None, 2):
-                # pywin32 EnumPrinters(level=2) retorna formatos distintos segun version:
-                #
-                # Formato simple (versiones antiguas): 5 valores
-                #   (Flags, pDescription, pName, pComment, pStatus)
-                #
-                # Formato PRINTER_INFO_2 completo (versiones nuevas): 21 valores
-                #   [0] pServerName, [1] pPrinterName, [2] pShareName,
-                #   [3] pPortName, [4] pDriverName, [5] pComment, ...
-                info = tuple(printer_info)
-
-                if len(info) <= 5:
-                    # Formato simple
-                    pName = info[2] if len(info) > 2 else ''
-                    pDesc = info[1] if len(info) > 1 else pName
-                    pPort = ''
-                else:
-                    # Formato PRINTER_INFO_2 completo
-                    pName = info[1]   # pPrinterName
-                    pDesc = info[5] if len(info) > 5 and info[5] else info[4]  # pComment o pDriverName
-                    pPort = info[3]   # pPortName (ej: USB001)
-
-                if pName:
-                    printers.append({
-                        'name': pName,
-                        'description': pDesc,
-                        'port': pPort
-                    })
-            return printers
+            for item in win32print.EnumPrinters(flags, None, 4):
+                info = item if isinstance(item, (list, tuple)) else list(item)
+                name = info[0] if len(info) > 0 else ''
+                port = info[1] if len(info) > 1 else ''
+                if name and not name.startswith('pPrinter'):
+                    printers.append({'name': name, 'description': name, 'port': port})
+            if printers:
+                return printers
         except Exception as e:
-            log('error', 'Error listando impresoras con win32print: {}'.format(e))
-            return []
+            log('debug', 'win32print nivel 4 fallo: {}'.format(e))
 
-    # Fallback: usar PowerShell (para Win7 sin pywin32 instalado)
+        # METODO 3: win32print con nivel 1 (formato: Flags, Desc, Name, Comment)
+        try:
+            flags = win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS
+            for item in win32print.EnumPrinters(flags, None, 1):
+                info = item if isinstance(item, (list, tuple)) else list(item)
+                name = info[2] if len(info) > 2 else ''
+                desc = info[1] if len(info) > 1 else name
+                if name and not name.startswith('p'):
+                    printers.append({'name': name, 'description': desc, 'port': ''})
+            if printers:
+                return printers
+        except Exception as e:
+            log('error', 'Error listando impresoras: {}'.format(e))
+
+    # METODO 4: Fallback PowerShell simple (sin JSON)
     try:
         result = subprocess.check_output(
             'powershell -NoProfile -Command "Get-WmiObject Win32_Printer | Select-Object -ExpandProperty Name"',
@@ -175,8 +190,10 @@ def list_printers():
         names = result.decode('mbcs', errors='replace').strip().split('\r\n')
         return [{'name': n.strip(), 'description': n.strip(), 'port': ''} for n in names if n.strip()]
     except Exception as e:
-        log('error', 'Error listando impresoras con PowerShell: {}'.format(e))
+        log('error', 'Error listando impresoras (fallback): {}'.format(e))
         return []
+
+    return printers
 
 
 def get_printer_port(printer_name):
