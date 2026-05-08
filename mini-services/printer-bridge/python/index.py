@@ -133,10 +133,16 @@ def list_printers():
         try:
             printers = []
             flags = win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS
-            for (flags_, desc, name, _, _, _, _) in win32print.EnumPrinters(flags, None, 2):
+            for printer_info in win32print.EnumPrinters(flags, None, 2):
+                # pywin32 EnumPrinters(level=2) retorna 5 valores:
+                # (Flags, pDescription, pName, pComment, pStatus)
+                # Pero algunas versiones retornan diferente cantidad
+                info_tuple = tuple(printer_info)
+                pName = info_tuple[2] if len(info_tuple) > 2 else ''
+                pDesc = info_tuple[1] if len(info_tuple) > 1 else pName
                 printers.append({
-                    'name': name,
-                    'description': desc,
+                    'name': pName,
+                    'description': pDesc,
                     'port': ''
                 })
             return printers
@@ -672,7 +678,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-        self.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
+        try:
+            self.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
+        except (ConnectionAbortedError, BrokenPipeError, ConnectionResetError):
+            pass
 
     def do_GET(self):
         if self.path == '/api/printers':
@@ -719,8 +728,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            html = generate_dashboard()
-            self.wfile.write(html.encode('utf-8'))
+            try:
+                html = generate_dashboard()
+                self.wfile.write(html.encode('utf-8'))
+            except (ConnectionAbortedError, BrokenPipeError, ConnectionResetError):
+                # El navegador cerro la conexion antes de terminar de enviar
+                # (error comun, no critico - ignorar silenciosamente)
+                pass
 
     def do_POST(self):
         content_length = int(self.headers.get('Content-Length', 0))
