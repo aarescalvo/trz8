@@ -244,12 +244,13 @@ def print_raw(printer_name, data):
         hPrinter = win32print.OpenPrinter(printer_name)
 
         try:
-            # Informacion del documento
-            docInfo = {
-                'pDocName': b'PrinterBridge',
-                'pOutputFile': None,
-                'pDatatype': b'RAW'
-            }
+            # Informacion del documento (formato DOC_INFO_1: lista de 3 elementos)
+            # Algunas versiones de pywin32 requieren lista, otras aceptan dict
+            docInfo = [
+                b'PrinterBridge',  # pDocName
+                None,               # pOutputFile
+                b'RAW'              # pDatatype
+            ]
 
             # Iniciar documento
             win32print.StartDocPrinter(hPrinter, 1, docInfo)
