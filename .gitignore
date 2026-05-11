@@ -81,7 +81,9 @@ backups/
 *.zip
 
 # Upload files (user uploads, large files)
-upload/
+/upload/
+# Pero permitir la carpeta upload del printer-bridge
+!mini-services/printer-bridge/python/upload/
 
 # Analysis/temp files from audits
 *-analysis.txt
