@@ -74,7 +74,6 @@ export async function POST(request: NextRequest) {
         contenido: contenidoFinal,
         variables,
         nombreArchivo: file?.name || null,
-        esBinario,
         diasConsumo,
         temperaturaMax,
         activo: true,

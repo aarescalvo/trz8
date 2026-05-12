@@ -37,36 +37,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Si es archivo binario, enviar directo sin procesar
-    if (rotulo.esBinario) {
-      if (!impresoraIp) {
-        return NextResponse.json({
-          success: false,
-          error: 'Se requiere IP de impresora para archivos binarios'
-        }, { status: 400 })
+    // Resolver contenido (si es base64, decodificar)
+    let contenidoBase = rotulo.contenido
+    try {
+      if (contenidoBase && !contenidoBase.startsWith('^') && !contenidoBase.startsWith('\x02') && !contenidoBase.startsWith('<STX>') && !contenidoBase.startsWith('n\n') && !contenidoBase.startsWith('SO')) {
+        const decoded = Buffer.from(contenidoBase, 'base64').toString('latin1')
+        if (decoded.startsWith('^') || decoded.startsWith('\x02') || decoded.startsWith('<STX>')) {
+          contenidoBase = decoded
+        }
       }
-
-      try {
-        // Decodificar de base64
-        const buffer = Buffer.from(rotulo.contenido, 'base64')
-        await enviarBufferAImpresora(buffer, impresoraIp, impresoraPuerto)
-        return NextResponse.json({
-          success: true,
-          message: `Archivo binario enviado a ${impresoraIp}:${impresoraPuerto}`,
-          esBinario: true
-        })
-      } catch (printError) {
-        console.error('Error al imprimir archivo binario:', printError)
-        return NextResponse.json({
-          success: false,
-          error: 'Error al enviar archivo binario a la impresora',
-          details: String(printError)
-        }, { status: 500 })
-      }
+    } catch (e) {
+      // No es base64 valido, usar tal cual
     }
 
     // Procesar el contenido según tipo de impresora (para archivos de texto)
-    let contenidoProcesado = rotulo.contenido
+    let contenidoProcesado = contenidoBase
     
     // Reemplazar variables con datos
     contenidoProcesado = reemplazarVariables(contenidoProcesado, datos, rotulo.tipoImpresora)
