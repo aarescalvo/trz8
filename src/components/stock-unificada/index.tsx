@@ -10,7 +10,7 @@ interface Operador {
   id: string
   nombre: string
   rol: string
-  nivel?: number
+  nivel?: string
   permisos?: Record<string, boolean>
 }
 
