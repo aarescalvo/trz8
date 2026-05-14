@@ -54,6 +54,13 @@ export function useAuth() {
   return ctx
 }
 
+/** Hook para usar dentro de rutas autenticadas — devuelve Operador no-nullable */
+export function useOperador(): Operador {
+  const { operador, loading } = useAuth()
+  if (loading || !operador) return null as unknown as Operador
+  return operador
+}
+
 export type { Operador }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

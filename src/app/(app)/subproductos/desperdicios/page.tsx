@@ -1,11 +1,11 @@
 'use client'
 
-import { useAuth } from '@/components/providers/auth-provider'
+import { useOperador } from '@/components/providers/auth-provider'
 import { EditableScreenWrapper } from '@/components/ui/editable-screen'
 import { RenderingModule } from '@/components/rendering'
 
 export default function Page() {
-  const { operador } = useAuth()
+  const operador = useOperador()
   return (
     <EditableScreenWrapper moduloId="desperdicios" operador={operador}>
       <RenderingModule operador={operador} tipoInicial="DESPERDICIOS" />

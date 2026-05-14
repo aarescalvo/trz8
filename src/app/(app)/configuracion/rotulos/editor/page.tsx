@@ -1,12 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/components/providers/auth-provider'
+import { useOperador } from '@/components/providers/auth-provider'
 import { ConfigRotulosModule } from '@/components/config-rotulos'
 
 export default function Page() {
   const router = useRouter()
-  const { operador } = useAuth()
+  const operador = useOperador()
   return (
     <ConfigRotulosModule
       operador={operador}
