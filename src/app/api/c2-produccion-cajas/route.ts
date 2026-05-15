@@ -192,6 +192,16 @@ export async function POST(request: NextRequest) {
     const caja = await db.$transaction(async (tx) => {
       const nuevaCaja = await tx.cajaEmpaque.create({
         data: {
+          codigoBarras: numero,
+          codigoArticulo: '000',
+          codigoEspecie: '0',
+          codigoTipificacion: '00',
+          codigoTrabajo: '0',
+          codigoTransporte: '0',
+          codigoDestino: '00',
+          loteNumero: 1,
+          unidades: piezas || 1,
+          numeradorCaja: 1,
           numero,
           productoDesposteId,
           cuartoId: cuartoId || null,
@@ -206,7 +216,6 @@ export async function POST(request: NextRequest) {
           fechaDesposte: hoy,
           fechaVencimiento,
           estado: 'ARMADA',
-          codigoBarras: numero,
           barcodeGs1_128
         },
         include: {

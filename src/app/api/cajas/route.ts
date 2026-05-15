@@ -112,6 +112,16 @@ export async function POST(request: NextRequest) {
 
     const caja = await db.cajaEmpaque.create({
       data: {
+        codigoBarras: data.codigoBarras || '0000000000',
+        codigoArticulo: '000',
+        codigoEspecie: '0',
+        codigoTipificacion: '00',
+        codigoTrabajo: '0',
+        codigoTransporte: '0',
+        codigoDestino: '00',
+        loteNumero: 1,
+        unidades: data.piezas ?? 1,
+        numeradorCaja: 1,
         numero: data.numero,
         pesoBruto: data.pesoBruto ?? 0,
         pesoNeto: data.pesoNeto ?? 0,
@@ -122,7 +132,6 @@ export async function POST(request: NextRequest) {
         propietarioId: data.propietarioId || null,
         palletId: data.palletId || null,
         tropaCodigo: data.tropaCodigo || null,
-        codigoBarras: data.codigoBarras || null,
         fechaFaena: data.fechaFaena ? new Date(data.fechaFaena) : null,
         fechaDesposte: data.fechaDesposte ? new Date(data.fechaDesposte) : null,
         fechaVencimiento: data.fechaVencimiento ? new Date(data.fechaVencimiento) : null,

@@ -190,8 +190,17 @@ export async function POST(request: NextRequest) {
     // Crear caja
     const caja = await db.cajaEmpaque.create({
       data: {
+        codigoBarras: codigoBarras || '0000000000',
+        codigoArticulo: '000',
+        codigoEspecie: '0',
+        codigoTipificacion: '00',
+        codigoTrabajo: '0',
+        codigoTransporte: '0',
+        codigoDestino: '00',
+        loteNumero: 1,
+        unidades: unidades || 1,
+        numeradorCaja: 1,
         numero,
-        codigoBarras,
         tara,
         piezas: unidades,
         pesoNeto,
