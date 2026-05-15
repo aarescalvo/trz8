@@ -127,7 +127,6 @@ export async function POST(request: NextRequest) {
     const pallet = await db.pallet.create({
       data: {
         numero: numeroPalletInt,
-        ssccCode: ssccFinal,
         estado: 'ARMADO',
         esMixto: esMixto || false,
         pesoTotal,
