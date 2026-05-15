@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       piezasTotal: cajas.reduce((acc, c) => acc + c.piezas, 0),
       porEstado: {
         enCamara: cajas.filter(c => c.estado === 'EN_CAMARA').length,
-        enPallet: cajas.filter(c => c.estado === 'EN_PALLET').length,
+        enPallet: cajas.filter(c => c.estado === 'EN_PALLETS').length,
         despachadas: cajas.filter(c => c.estado === 'DESPACHADA').length
       }
     }

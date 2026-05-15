@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     const cajas = await db.cajaEmpaque.findMany({
       where: {
         id: { in: cajaIds },
-        estado: { in: ['ARMADA', 'EN_PALLET', 'EN_CAMARA'] }
+        estado: { in: ['ARMADA', 'EN_PALLETS', 'EN_CAMARA'] }
       },
       include: {
         productoDesposte: { select: { nombre: true, codigo: true } }
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         const cajasAnteriores = await db.cajaEmpaque.findMany({
           where: {
             productoDesposteId: caja.productoDesposteId,
-            estado: { in: ['ARMADA', 'EN_PALLET', 'EN_CAMARA'] },
+            estado: { in: ['ARMADA', 'EN_PALLETS', 'EN_CAMARA'] },
             id: { notIn: cajaIds },
             fechaFaena: { lt: caja.fechaFaena! }
           },

@@ -151,7 +151,7 @@ export default function C2StockModule({ operador }: { operador: Operador }) {
   const getEstadoBadge = (estado: string) => {
     const colors: Record<string, string> = {
       ARMADA: 'bg-amber-100 text-amber-800',
-      EN_PALLET: 'bg-blue-100 text-blue-800',
+      EN_PALLETS: 'bg-blue-100 text-blue-800',
       EN_CAMARA: 'bg-indigo-100 text-indigo-800',
       DESPACHADA: 'bg-green-100 text-green-800'
     }
@@ -161,7 +161,7 @@ export default function C2StockModule({ operador }: { operador: Operador }) {
   const getEstadoLabel = (estado: string) => {
     const labels: Record<string, string> = {
       ARMADA: 'Armada',
-      EN_PALLET: 'En Pallet',
+      EN_PALLETS: 'En Pallet',
       EN_CAMARA: 'En Cámara',
       DESPACHADA: 'Despachada'
     }

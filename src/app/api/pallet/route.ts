@@ -125,7 +125,7 @@ export async function PUT(request: NextRequest) {
     if (estado === 'EN_CAMARA') {
       await db.cajaEmpaque.updateMany({
         where: { palletId: id },
-        data: { estado: 'EN_PALLET' }
+        data: { estado: 'EN_PALLETS' }
       })
     }
 

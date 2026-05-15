@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     const cajas = await db.cajaEmpaque.findMany({
       where: {
         id: { in: cajaIds },
-        estado: { in: ['ARMADA', 'EN_PALLET'] }
+        estado: { in: ['ARMADA', 'EN_PALLETS'] }
       },
       include: {
         productoDesposte: { select: { nombre: true, codigo: true } }
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
         where: { id: caja.id },
         data: {
           palletId: pallet.id,
-          estado: 'EN_PALLET'
+          estado: 'EN_PALLETS'
         }
       })
     }
@@ -213,7 +213,7 @@ export async function PUT(request: NextRequest) {
       for (const cajaId of agregarCajaIds) {
         await db.cajaEmpaque.update({
           where: { id: cajaId },
-          data: { palletId: id, estado: 'EN_PALLET' }
+          data: { palletId: id, estado: 'EN_PALLETS' }
         })
       }
       // Recalcular totales

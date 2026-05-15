@@ -140,7 +140,7 @@ export default function C2ExpedicionModule({ operador }: { operador: Operador })
       const data = await res.json()
       if (data.success) {
         const disponibles = (data.data || []).filter(
-          (c: CajaDisponible) => c.estado === 'ARMADA' || c.estado === 'EN_PALLET' || c.estado === 'EN_CAMARA'
+          (c: CajaDisponible) => c.estado === 'ARMADA' || c.estado === 'EN_PALLETS' || c.estado === 'EN_CAMARA'
         )
         setCajasDisponibles(disponibles)
       }

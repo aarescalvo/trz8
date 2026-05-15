@@ -696,7 +696,7 @@ export default function C2ProduccionModule({ operador }: { operador: Operador })
                         <TableCell>
                           <Badge variant="outline" className={
                             c.estado === 'ARMADA' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                            c.estado === 'EN_PALLET' ? 'bg-teal-50 text-teal-700 border-teal-200' :
+                            c.estado === 'EN_PALLETS' ? 'bg-teal-50 text-teal-700 border-teal-200' :
                             c.estado === 'DESPACHADA' ? 'bg-green-50 text-green-700 border-green-200' :
                             'bg-stone-50 text-stone-700'
                           }>

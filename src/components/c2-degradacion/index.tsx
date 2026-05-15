@@ -110,7 +110,7 @@ export default function C2DegradacionModule({ operador }: { operador: Operador }
       const data = await res.json()
       if (data.success) {
         setCajasDisponibles((data.data || []).filter((c: CajaDisponible) =>
-          c.estado === 'ARMADA' || c.estado === 'EN_PALLET' || c.estado === 'EN_CAMARA'
+          c.estado === 'ARMADA' || c.estado === 'EN_PALLETS' || c.estado === 'EN_CAMARA'
         ))
       }
     } catch (error) {
