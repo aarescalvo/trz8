@@ -112,10 +112,8 @@ export async function POST(request: NextRequest) {
       select: { numero: true }
     })
 
-    const numeroPallet = ultimoPallet?.numero
-      ? (parseInt(ultimoPallet.numero.replace('PAL-', '')) + 1).toString().padStart(6, '0')
-      : '000001'
-
+    const numeroPalletInt = (ultimoPallet?.numero || 0) + 1
+    const numeroPallet = numeroPalletInt.toString().padStart(6, '0')
     const numero = `PAL-${numeroPallet}`
 
     // Generar SSCC si no se proveyó
@@ -128,7 +126,7 @@ export async function POST(request: NextRequest) {
     // Crear el pallet
     const pallet = await db.pallet.create({
       data: {
-        numero,
+        numero: numeroPalletInt,
         ssccCode: ssccFinal,
         estado: 'ARMADO',
         esMixto: esMixto || false,
