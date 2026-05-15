@@ -107,7 +107,6 @@ export async function POST(request: NextRequest) {
         fechaRespuesta: data.fechaRespuesta ? new Date(data.fechaRespuesta) : null,
         respondidoPor: data.respondidoPor || null,
         seguimiento: data.seguimiento || null,
-        adjuntoUrl: data.adjuntoUrl || null,
         observaciones: data.observaciones || null,
         updatedAt: new Date()
       },
