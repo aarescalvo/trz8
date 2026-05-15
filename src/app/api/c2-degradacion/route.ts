@@ -146,21 +146,27 @@ export async function POST(request: NextRequest) {
 
       await db.cajaEmpaque.create({
         data: {
+          codigoBarras: `CAJA-${numeroCaja}`,
+          codigoArticulo: '000',
+          codigoEspecie: '0',
+          codigoTipificacion: '00',
+          codigoTrabajo: '0',
+          codigoTransporte: '0',
+          codigoDestino: '00',
           numero: `CAJA-${numeroCaja}`,
           productoDesposteId: nuevoProductoId,
           cuartoId: caja.cuartoId,
           loteId: caja.loteId,
           propietarioId: caja.propietarioId,
-          pesoBruto: pesoAprovechamiento,
-          pesoNeto: pesoAprovechamiento,
+          pesoBruto: parseFloat(pesoAprovechamiento),
+          pesoNeto: parseFloat(pesoAprovechamiento),
           tara: 0,
           piezas: 1,
           tropaCodigo: caja.tropaCodigo,
           fechaFaena: caja.fechaFaena,
           fechaDesposte: fechaDesposte,
           fechaVencimiento: fechaVencimiento,
-          estado: 'ARMADA',
-          codigoBarras: `CAJA-${numeroCaja}`
+          estado: 'ARMADA'
         }
       })
     }
