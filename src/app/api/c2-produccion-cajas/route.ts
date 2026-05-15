@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
               tipoCuarto: { select: { nombre: true, codigo: true } }
             }
           },
-          pallet: { select: { id: true, numero: true, ssccCode: true } },
+          pallet: { select: { id: true, numero: true } },
           propietario: { select: { id: true, nombre: true } },
           lote: { select: { id: true, numero: true, estado: true } }
         },
