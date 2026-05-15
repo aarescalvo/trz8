@@ -308,7 +308,7 @@ export async function PATCH(request: NextRequest) {
 
     if (data.accion === 'aprobar') {
       // Si hay diferencia, crear movimiento de ajuste
-      if (existente.diferencia !== 0) {
+      if (Number(existente.diferencia) !== 0) {
         resultado = await db.$transaction(async (tx) => {
           const caja = await tx.caja.findUnique({
             where: { id: existente.cajaId }
