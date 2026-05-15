@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
     const cliente = await db.cliente.create({
       data: {
         nombre,
-        tipo: tipo || 'USUARIO_FAENA',
+        esProductor: tipo === 'PRODUCTOR' ? true : false,
+        esUsuarioFaena: tipo === 'USUARIO_FAENA' ? true : false,
         dni: dni || null,
         cuit: cuit || null,
         matricula: matricula || null,
