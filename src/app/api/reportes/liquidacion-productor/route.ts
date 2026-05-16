@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
 
       // Get pagos for facturas of this tropa
       const pagosTropa = facturasTropa.flatMap(f =>
-        f.pagos.map(p => ({
+        f.pagosFactura.map(p => ({
           id: p.id,
           fecha: p.fecha,
           monto: p.monto,
@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
     const totalKgCanal = tropasDetail.reduce((sum, t) => sum + t.kgCanal, 0)
     const rindePromedio = totalKgVivo > 0 ? (totalKgCanal / totalKgVivo) * 100 : 0
     const totalFacturado = facturas.reduce((sum, f) => sum + f.total, 0)
-    const totalCobrado = facturas.reduce((sum, f) => sum + f.pagos.reduce((s, p) => s + p.monto, 0), 0)
+    const totalCobrado = facturas.reduce((sum, f) => sum + f.pagosFactura.reduce((s, p) => s + p.monto, 0), 0)
     const saldoPendiente = totalFacturado - totalCobrado
 
     return NextResponse.json({
@@ -208,7 +208,7 @@ export async function GET(request: NextRequest) {
             garron: d.garron,
             pesoKg: d.pesoKg
           })),
-          pagos: f.pagos.map(p => ({
+          pagos: f.pagosFactura.map(p => ({
             id: p.id,
             fecha: p.fecha,
             monto: p.monto,

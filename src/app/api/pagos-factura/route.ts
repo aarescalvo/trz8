@@ -276,7 +276,7 @@ export async function obtenerCuentaCorriente(clienteId: string) {
       saldo: saldo += factura.total
     })
 
-    for (const pago of factura.pagos) {
+    for (const pago of factura.pagosFactura) {
       movimientos.push({
         fecha: pago.fecha,
         tipo: 'PAGO',

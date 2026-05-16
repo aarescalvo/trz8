@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     // Calcular montos pagados y saldos
     const facturasConMontos = facturas.map(f => {
-      const totalPagado = f.pagos.reduce((sum, p) => sum + p.monto, 0)
+      const totalPagado = f.pagosFactura.reduce((sum, p) => sum + p.monto, 0)
       const totalNotasCredito = f.notas.filter(n => n.tipo === 'CREDITO').reduce((sum, n) => sum + n.total, 0)
       const saldoPendiente = Math.max(0, f.total - totalPagado - totalNotasCredito)
       return { ...f, totalPagado, saldoPendiente }

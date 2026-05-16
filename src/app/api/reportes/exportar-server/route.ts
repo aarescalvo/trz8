@@ -426,7 +426,7 @@ async function fetchCuentasCorrientesData(filters: ExportRequestBody['filters'])
     entry.totalFacturado += f.total
     entry.saldo += f.saldo
     entry.cantidadFacturas++
-    const pagosFactura = f.pagos.reduce((sum: number, p: any) => sum + p.monto, 0)
+    const pagosFactura = f.pagosFactura.reduce((sum: number, p: any) => sum + p.monto, 0)
     entry.totalPagado += pagosFactura
   }
 

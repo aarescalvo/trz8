@@ -185,7 +185,7 @@ export async function GET(request: NextRequest) {
 
       const entry = facturasByClient.get(cId)!
       entry.totalFacturado += f.total
-      const totalPagos = f.pagos.reduce((sum, p) => sum + p.monto, 0)
+      const totalPagos = f.pagosFactura.reduce((sum, p) => sum + p.monto, 0)
       entry.totalCobrado += totalPagos
       entry.saldoPendiente += f.saldo
 

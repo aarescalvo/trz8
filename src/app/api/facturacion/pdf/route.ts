@@ -261,7 +261,7 @@ function generarFacturaPDF(factura: any, config: any) {
 
   // Sección de pagos
   const pagosSection: any[] = []
-  if ((factura.pagos || []).length > 0) {
+  if ((factura.pagosFactura || []).length > 0) {
     pagosSection.push(
       { text: 'PAGOS REGISTRADOS', fontSize: 9, bold: true, color: COLOR_MUTED, margin: [0, 15, 0, 5] },
       {
@@ -275,7 +275,7 @@ function generarFacturaPDF(factura: any, config: any) {
               { text: 'Referencia', style: 'tableHeader' },
               { text: 'Monto', style: 'tableHeader', alignment: 'right' },
             ],
-            ...factura.pagos.map((p: any) => [
+            ...factura.pagosFactura.map((p: any) => [
               { text: formatDate(p.fecha), fontSize: 8 },
               { text: METODOS_PAGO[p.metodoPago] || p.metodoPago, fontSize: 8 },
               { text: p.referencia || '-', fontSize: 8 },

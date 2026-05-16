@@ -91,7 +91,7 @@ export async function POST(
       )
     }
 
-    const totalPagado = factura.pagos.reduce((sum, p) => sum + p.monto, 0)
+    const totalPagado = factura.pagosFactura.reduce((sum, p) => sum + p.monto, 0)
     const saldoPendiente = factura.total - totalPagado
 
     if (monto > saldoPendiente) {

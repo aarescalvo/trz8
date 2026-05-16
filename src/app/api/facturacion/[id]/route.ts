@@ -32,7 +32,7 @@ export async function GET(
     }
 
     // Calcular saldo
-    const totalPagado = factura.pagos.reduce((sum, p) => sum + p.monto, 0)
+    const totalPagado = factura.pagosFactura.reduce((sum, p) => sum + p.monto, 0)
     const saldoPendiente = factura.total - totalPagado
 
     return NextResponse.json({

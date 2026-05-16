@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
       entry.cantidadFacturas++
 
       // Calcular pagos de esta factura
-      const pagosFactura = f.pagos.reduce((sum, p) => sum + p.monto, 0)
+      const pagosFactura = f.pagosFactura.reduce((sum, p) => sum + p.monto, 0)
       entry.totalPagado += pagosFactura
     }
 

@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     // Calcular resumen
     const totalFacturado = facturas.reduce((sum, f) => sum + f.total, 0)
     const totalPagado = facturas.reduce(
-      (sum, f) => sum + f.pagos.reduce((s, p) => s + p.monto, 0),
+      (sum, f) => sum + f.pagosFactura.reduce((s, p) => s + p.monto, 0),
       0
     )
     const saldoPendiente = facturas.reduce((sum, f) => sum + f.saldo, 0)
