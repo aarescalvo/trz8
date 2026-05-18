@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 // Obtener origins permitidos desde variable de entorno, con fallback para desarrollo
 const getAllowedOrigins = (): string[] => {
@@ -26,6 +27,16 @@ const nextConfig: NextConfig = {
     serverActions: {
       allowedOrigins: getAllowedOrigins(),
     },
+  },
+  // Fix Windows case-insensitive path causing duplicate React instances
+  // (e.g. C:\TrazaAlan vs C:\Trazaalan produce different webpack cache keys)
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'react': path.resolve(process.cwd(), 'node_modules/react'),
+      'react-dom': path.resolve(process.cwd(), 'node_modules/react-dom'),
+    };
+    return config;
   },
 };
 
