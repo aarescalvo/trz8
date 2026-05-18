@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import path from "path";
+import fs from "fs";
 
 // Obtener origins permitidos desde variable de entorno, con fallback para desarrollo
 const getAllowedOrigins = (): string[] => {
@@ -12,6 +13,11 @@ const getAllowedOrigins = (): string[] => {
     'http://localhost:3000',
     'http://localhost:3001',
   ];
+};
+
+// Use realpathSync to get canonical path (fixes Windows case-insensitive duplication)
+const getRealPath = (p: string) => {
+  try { return fs.realpathSync(p); } catch { return p; }
 };
 
 // Version: 3.18.0 - Security hardening + quality improvements
@@ -28,11 +34,13 @@ const nextConfig: NextConfig = {
     },
   },
   // Fix Windows case-insensitive path causing duplicate React instances
+  // Don't bundle react/react-dom for server - let Node.js resolve them at runtime
+  serverExternalPackages: ['react', 'react-dom'],
   webpack: (config) => {
-    // Force single React instance across all bundles (client + server)
-    const reactPath = path.resolve(process.cwd(), 'node_modules/react');
-    const reactDomPath = path.resolve(process.cwd(), 'node_modules/react-dom');
-    const schedulerPath = path.resolve(process.cwd(), 'node_modules/scheduler');
+    // Force single React instance using canonical (real) paths
+    const reactPath = getRealPath(path.resolve(process.cwd(), 'node_modules/react'));
+    const reactDomPath = getRealPath(path.resolve(process.cwd(), 'node_modules/react-dom'));
+    const schedulerPath = getRealPath(path.resolve(process.cwd(), 'node_modules/scheduler'));
     config.resolve.alias = {
       ...config.resolve.alias,
       'react': reactPath,
@@ -42,8 +50,6 @@ const nextConfig: NextConfig = {
       'react-dom': reactDomPath,
       'scheduler': schedulerPath,
     };
-    // Prevent symlink resolution issues on Windows
-    config.resolve.symlinks = false;
     return config;
   },
 };
