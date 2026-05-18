@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
   // Use webpack aliases with canonical paths (realpathSync) to force single React instance
   // DO NOT use serverExternalPackages for react/react-dom - it breaks React 19's
   // conditional exports (react-server vs default) causing null useContext at runtime
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     // Force single React instance using canonical (real) paths
     const reactPath = getRealPath(path.resolve(process.cwd(), 'node_modules/react'));
     const reactDomPath = getRealPath(path.resolve(process.cwd(), 'node_modules/react-dom'));
@@ -45,12 +45,24 @@ const nextConfig: NextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       'react': reactPath,
+      'react/jsx-runtime': path.join(reactPath, 'jsx-runtime.js'),
+      'react/jsx-dev-runtime': path.join(reactPath, 'jsx-dev-runtime.js'),
       'react-dom/client': path.join(reactDomPath, 'client.js'),
       'react-dom/server': path.join(reactDomPath, 'server.js'),
       'react-dom/server.browser': path.join(reactDomPath, 'server.browser.js'),
       'react-dom': reactDomPath,
       'scheduler': schedulerPath,
     };
+    // Prevent webpack from resolving different React instances via symlinks
+    config.resolve.symlinks = false;
+    // Ensure React is bundled (not externalized) on server too
+    config.externals = config.externals.filter(
+      (e: string | RegExp | Function) => {
+        if (typeof e === 'string') return e !== 'react' && e !== 'react-dom' && e !== 'scheduler';
+        if (e instanceof RegExp) return !e.test('react') && !e.test('react-dom') && !e.test('scheduler');
+        return true;
+      }
+    );
     return config;
   },
 };
