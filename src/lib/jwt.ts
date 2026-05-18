@@ -63,7 +63,9 @@ export function getSessionCookieConfig() {
     name: COOKIE_NAME,
     options: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      // Solo usar Secure si explicitamente se configura o si NODE_ENV=production con HTTPS
+      // En redes locales sin HTTPS (http://192.168.x.x), Secure impide que el navegador envíe la cookie
+      secure: process.env.COOKIE_SECURE === 'true',
       sameSite: 'lax' as const,
       path: '/',
       maxAge: 60 * 60 * 24, // 24 hours in seconds
@@ -79,7 +81,7 @@ export function getLogoutCookieConfig() {
     name: COOKIE_NAME,
     options: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.COOKIE_SECURE === 'true',
       sameSite: 'lax' as const,
       path: '/',
       maxAge: 0, // Expire immediately
