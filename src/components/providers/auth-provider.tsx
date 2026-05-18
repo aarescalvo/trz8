@@ -179,7 +179,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       const data = await res.json()
       if (data.success) {
-        // Login siempre fuerza actualización completa
+        // Login siempre fuerza actualización completa (ref + state)
+        operadorRef.current = data.data
         prevPermisosKey.current = null
         setOperador(data.data)
         return { success: true }
