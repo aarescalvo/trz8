@@ -1,4 +1,4 @@
-﻿CT~~CD,~CC^~CT~
+﻿CT~~CD,~CC^~CT~
 ^XA
 ~TA000
 ~JSN
