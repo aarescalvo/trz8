@@ -340,12 +340,18 @@ async function main() {
           puedeListaFaena: true,
           puedeRomaneo: true,
           puedeIngresoCajon: true,
+          puedeCuarteo: true,
+          puedeDesposte: true,
+          puedeEmpaque: true,
+          puedeExpedicionC2: true,
           puedeMenudencias: true,
           puedeStock: true,
           puedeReportes: true,
           puedeCCIR: true,
           puedeFacturacion: true,
           puedeConfiguracion: true,
+          puedeCalidad: true,
+          puedeAutorizarReportes: true,
         },
       })
       logOk('Operador admin creado', admin.usuario)
