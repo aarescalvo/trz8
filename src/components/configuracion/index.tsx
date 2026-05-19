@@ -12,7 +12,7 @@ import {
   CommandList,
   CommandShortcut,
 } from '@/components/ui/command'
-import { Settings, Building2, Warehouse, UserCheck, Package, Users, Truck, Beef, DollarSign, Receipt, Search, X, Shield, Server } from 'lucide-react'
+import { Settings, Building2, Warehouse, UserCheck, Package, Users, Truck, Beef, DollarSign, Receipt, Search, X, Shield, Server, Leaf } from 'lucide-react'
 import { ConfigFrigorifico } from './config-frigorifico'
 import { Corrales } from './corrales'
 import { Camaras } from './camaras'
@@ -26,6 +26,7 @@ import { PreciosServicioConfig } from './precios-servicio'
 import { AdminSistemaModule } from './admin-sistema'
 import { ConfigSistema } from './config-sistema'
 import { AuditoriaConfig } from './auditoria'
+import { Productores } from './productores'
 
 interface Operador {
   id: string
@@ -45,6 +46,7 @@ export function ConfiguracionModule({ operador }: { operador: Operador }) {
     { id: 'tipificadores', label: 'Tipificadores', tab: 'tipificadores', icon: UserCheck, group: 'Producción' },
     { id: 'productos', label: 'Productos', tab: 'productos', icon: Package, group: 'Producción' },
     { id: 'clientes', label: 'Clientes', tab: 'clientes', icon: Beef, group: 'Comercial' },
+    { id: 'productores', label: 'Productores', tab: 'productores', icon: Leaf, group: 'Comercial' },
     { id: 'tiposServicio', label: 'Tipos de Servicio', tab: 'tiposServicio', icon: Receipt, group: 'Comercial' },
     { id: 'preciosServicio', label: 'Precios de Servicio', tab: 'preciosServicio', icon: DollarSign, group: 'Comercial' },
     { id: 'transportistas', label: 'Transportistas', tab: 'transportistas', icon: Truck, group: 'Logística' },
@@ -226,6 +228,9 @@ export function ConfiguracionModule({ operador }: { operador: Operador }) {
           </TabsContent>
           <TabsContent value="clientes">
             <Clientes operador={operador} />
+          </TabsContent>
+          <TabsContent value="productores">
+            <Productores operador={operador} />
           </TabsContent>
           <TabsContent value="tiposServicio">
             <TiposServicioConfig operador={{ ...operador, rol: ('rol' in operador ? operador.rol : 'ADMINISTRADOR') as string } } />

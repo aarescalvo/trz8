@@ -47,7 +47,7 @@ interface ProductorConsignatario {
 }
 
 interface Props {
-  operador: { id: string; nombre: string; nivel: string }
+  operador: { id: string; nombre: string; nivel?: string }
 }
 
 const TIPOS = [

@@ -283,7 +283,7 @@ function RegistroPHTab({ operador }: { operador: Operador }) {
     setLoading(true)
     try {
       // Buscar medias res a través de romaneo por tropaCodigo
-      const res = await fetch(`/api/romaneo?tropaCodigo=${tropaCodigo}&incluirMedias=true&estado=CONFIRMADO`)
+      const res = await fetch(`/api/romaneo?tropaCodigo=${tropaCodigo}&incluirMedias=true`)
       if (res.ok) {
         const json = await res.json()
         const romaneos = json.data || json.romaneos || []

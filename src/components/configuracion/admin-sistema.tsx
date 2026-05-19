@@ -35,13 +35,16 @@ interface Backup {
   type: string
 }
 
+interface VersionInfo {
+  version: string
+  commit: string
+  date: string
+  message: string
+}
+
 interface UpdateInfo {
-  installedVersion: string
-  latestVersion: {
-    sha: string
-    message: string
-    date: string
-  }
+  installedVersion: VersionInfo | string
+  latestVersion: VersionInfo
   updateAvailable: boolean
   repository: string
   branch: string
@@ -336,7 +339,7 @@ export function AdminSistemaModule({ operador }: AdminSistemaProps) {
                         <div className="flex items-center justify-between p-3 bg-stone-100 rounded-lg">
                           <div>
                             <p className="text-sm text-stone-500">Versión instalada</p>
-                            <p className="font-mono font-bold">{updateInfo.installedVersion}</p>
+                            <p className="font-mono font-bold">{typeof updateInfo.installedVersion === 'object' ? updateInfo.installedVersion.version : updateInfo.installedVersion}</p>
                           </div>
                           <CheckCircle className="w-6 h-6 text-green-500" />
                         </div>
@@ -344,7 +347,7 @@ export function AdminSistemaModule({ operador }: AdminSistemaProps) {
                         <div className="flex items-center justify-between p-3 bg-stone-100 rounded-lg">
                           <div>
                             <p className="text-sm text-stone-500">Última versión</p>
-                            <p className="font-mono font-bold">{updateInfo.latestVersion.sha}</p>
+                            <p className="font-mono font-bold">{updateInfo.latestVersion.commit}</p>
                           </div>
                           {updateInfo.updateAvailable ? (
                             <AlertCircle className="w-6 h-6 text-amber-500" />
