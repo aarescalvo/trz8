@@ -498,9 +498,124 @@ async function main() {
       logErr('Error creando clientes', e)
     }
 
-    // ═══ PASO 6b: Verificar cobertura de usuarios de faena ═══
-    //    Solo reporta cuáles no matchean (no crea clientes inexistentes)
-    logHeader('6b️⃣ Verificar usuarios de faena desde tropas')
+    // ═══ PASO 6b: Crear Clientes faltantes para Productores y Usuarios de Faena ═══
+    //    Lee tropas.json y crea automáticamente los clientes que no existan
+    logHeader('6b️⃣  Auto-crear clientes faltantes (Productores + Usuarios Faena)')
+    try {
+      const tropasData = readJsonFile<{
+        productorNombre: string | null; productorCuit: string | null;
+        usuarioFaenaNombre: string | null; usuarioFaenaCuit?: string | null;
+      }>('tropas.json')
+
+      // Recolectar productores faltantes (nombre + cuit únicos)
+      const productoresFaltantes = new Map<string, { nombre: string; cuit: string | null }>()
+      const usuariosFaenaFaltantes = new Map<string, { nombre: string; cuit: string | null }>()
+
+      for (const t of tropasData) {
+        // Productores
+        if (t.productorNombre && t.productorCuit) {
+          const existing = findCliente(clientes, t.productorCuit, t.productorNombre)
+          if (!existing) {
+            const key = t.productorCuit
+            if (!productoresFaltantes.has(key)) {
+              productoresFaltantes.set(key, { nombre: t.productorNombre, cuit: t.productorCuit })
+            }
+          }
+        }
+
+        // Usuarios de faena
+        if (t.usuarioFaenaNombre) {
+          const cuit = t.usuarioFaenaCuit ?? null
+          const existing = findCliente(clientes, cuit, t.usuarioFaenaNombre)
+          if (!existing && !usuariosFaenaFaltantes.has(normalize(t.usuarioFaenaNombre))) {
+            usuariosFaenaFaltantes.set(normalize(t.usuarioFaenaNombre), { nombre: t.usuarioFaenaNombre, cuit })
+          }
+        }
+      }
+
+      // Crear productores faltantes
+      let productoresCreados = 0
+      for (const [cuit, p] of productoresFaltantes) {
+        try {
+          const created = await prisma.cliente.create({
+            data: {
+              nombre: p.nombre,
+              cuit: p.cuit ?? undefined,
+              esProductor: true,
+              esUsuarioFaena: false,
+              activo: true,
+              observaciones: 'Productor creado automáticamente desde datos de tropas',
+            },
+          })
+          clientes.push({
+            id: created.id,
+            nombre: created.nombre,
+            cuit: created.cuit,
+            esProductor: true,
+            esUsuarioFaena: false,
+          })
+          productoresCreados++
+        } catch (err) {
+          const errMsg = (err as Error).message
+          if (errMsg.includes('Unique constraint')) {
+            const existente = await prisma.cliente.findFirst({ where: { cuit: p.cuit ?? undefined } })
+            if (existente) {
+              clientes.push({ id: existente.id, nombre: existente.nombre, cuit: existente.cuit, esProductor: existente.esProductor, esUsuarioFaena: existente.esUsuarioFaena })
+              productoresCreados++
+            }
+          } else {
+            console.warn(`  ⚠️  Error creando productor ${p.nombre}: ${errMsg.substring(0, 80)}`)
+          }
+        }
+      }
+
+      // Crear usuarios de faena faltantes
+      let ufCreados = 0
+      for (const [normName, uf] of usuariosFaenaFaltantes) {
+        const alreadyInClientes = findCliente(clientes, uf.cuit, uf.nombre)
+        if (alreadyInClientes) continue
+        try {
+          const created = await prisma.cliente.create({
+            data: {
+              nombre: uf.nombre,
+              cuit: uf.cuit ?? undefined,
+              esProductor: false,
+              esUsuarioFaena: true,
+              activo: true,
+              observaciones: 'Usuario de faena creado automáticamente desde datos de tropas',
+            },
+          })
+          clientes.push({
+            id: created.id,
+            nombre: created.nombre,
+            cuit: created.cuit,
+            esProductor: false,
+            esUsuarioFaena: true,
+          })
+          ufCreados++
+        } catch (err) {
+          const errMsg = (err as Error).message
+          if (errMsg.includes('Unique constraint')) {
+            const existente = await prisma.cliente.findFirst({ where: { cuit: uf.cuit ?? undefined } })
+            if (existente) {
+              clientes.push({ id: existente.id, nombre: existente.nombre, cuit: existente.cuit, esProductor: existente.esProductor, esUsuarioFaena: existente.esUsuarioFaena })
+              ufCreados++
+            }
+          } else {
+            console.warn(`  ⚠️  Error creando UF ${uf.nombre}: ${errMsg.substring(0, 80)}`)
+          }
+        }
+      }
+
+      logOk('Productores auto-creados', productoresCreados)
+      logOk('Usuarios de faena auto-creados', ufCreados)
+      logOk('Total clientes disponibles', clientes.length)
+    } catch (e) {
+      logErr('Error auto-creando clientes', e)
+    }
+
+    // ═══ PASO 6c: Verificar cobertura final ═══
+    logHeader('6c️⃣  Verificar cobertura final de usuarios de faena')
     try {
       const tropasData = readJsonFile<{
         productorNombre: string | null; productorCuit: string | null;

@@ -27,6 +27,39 @@ const nextConfig: NextConfig = {
       allowedOrigins: getAllowedOrigins(),
     },
   },
+  // Fix: evitar que React se externalice en el server bundle
+  // Sin esto, los componentes del servidor obtienen null al llamar useContext()
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Convertir config.externals a función para filtrar react
+      const originalExternals = config.externals;
+      if (typeof originalExternals === 'string' || Array.isArray(originalExternals)) {
+        config.externals = (ctx, cb) => {
+          (Array.isArray(originalExternals) ? originalExternals : [originalExternals]).forEach(ext => {
+            if (typeof ext === 'string' && !['react', 'react-dom', 'scheduler'].includes(ext)) {
+              ctx.addExternal(ext);
+            }
+          });
+          cb();
+        };
+      } else if (typeof originalExternals === 'function') {
+        config.externals = (ctx, cb, done) => {
+          originalExternals(ctx, (err, externals) => {
+            if (err) { cb(err); return; }
+            const filtered = Array.isArray(externals)
+              ? externals.filter(e => typeof e !== 'string' || !['react', 'react-dom', 'scheduler'].includes(e))
+              : externals;
+            cb(null, filtered);
+          }, done);
+        };
+      } else if (Array.isArray(originalExternals)) {
+        config.externals = originalExternals.filter(
+          e => typeof e !== 'string' || !['react', 'react-dom', 'scheduler'].includes(e)
+        );
+      }
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

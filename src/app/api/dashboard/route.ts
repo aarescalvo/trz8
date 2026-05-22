@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Invalidar cache cuando hay cambios
-export function invalidateDashboardCache() {
+// Invalidar cache cuando hay cambios (usado internamente)
+function invalidateDashboardCache() {
   cacheInvalidate('dashboard:')
 }
