@@ -1,94 +1,68 @@
 // Script para crear el rótulo de pesaje individual por defecto
-// Ejecutar con: bun run scripts/seed-rotulo-pesaje.ts
+// Zebra ZT410 - 90mm x 60mm - 200 DPI
+// Ejecutar con: npx tsx scripts/seed-rotulo-pesaje.ts
 
 import { PrismaClient, TipoRotulo } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('Creando rótulo de pesaje individual...')
+  console.log('Creando rótulo de pesaje individual (Zebra 90x60mm 200 DPI)...')
 
-  // Rótulo DPL para Datamax Mark II - 10x5cm (203 DPI)
-  // Ancho: 10cm = ~799 dots | Alto: 5cm = ~399 dots
-  //
-  // Comandos DPL:
-  // <STX>L = Inicio de formato de etiqueta
-  // T<x>,<y>,<fuente>,<alto>,<ancho>,"texto"
-  // B<x>,<y>,<tipo>,<alto>,<ancho>,<texto> = Código de barras
-  // <ETX> = Fin de etiqueta
-  //
-  // Formato del rótulo:
-  // ┌─────────────────────────────┐
-  // │  TROPA: B 2026 0100         │  (fila 30)
-  // │                             │
-  // │        ┌───────┐            │
-  // │        │ 0015  │  NÚMERO    │  (fila 100, centrado)
-  // │        └───────┘            │
-  // │                             │
-  // │  PESO: 450 KG               │  (fila 280)
-  // └─────────────────────────────┘
+  // ZPL aprobado - 90x60mm, 200 DPI (709x472 dots)
+  const contenidoZPL = '^XA^CI28^PW709^LL472^BY2,2.0,80^FO80,78^A0N,28,28^FDTROPA^FS^FO420,78^A0N,52,52^FD{{TROPA}}^FS^FO80,115^GB550,2,2^FS^FO80,128^A0N,22,22^FDN. ANIMAL^FS^FO80,172^A0N,78,78^FD{{NUMERO}}^FS^FO300,115^GB2,148,2^FS^FO325,128^A0N,22,22^FDPESO VIVO^FS^FO325,220^A0N,62,62^FD{{PESO_KG}}^FS^FO80,288^GB550,2,2^FS^FO80,300^BCN,80,Y,N,N^FD{{CODIGO_BARRAS}}^FS^FO80,390^A0N,14,14^FDCODE128 - {{CODIGO_BARRAS}}^FS^FO548,128^A0N,22,22^FDTIPO: {{TIPO}}^FS^FO548,172^A0N,16,16^FD{{FECHA}}^FS^XZ'
 
-  const contenidoDPL = `<STX>L
-T50,30,3,30,25,N,"TROPA:"
-T180,30,3,30,25,N,"{TROPA}"
-T280,120,5,60,50,N,"{NUMERO}"
-T50,300,3,30,25,N,"PESO:"
-T200,300,3,30,25,N,"{PESO} KG"
-<ETX>`
-
-  // Variables disponibles para el rótulo
+  // Variables del rótulo
   const variables = JSON.stringify([
-    { variable: 'TROPA', campo: 'tropa.codigo', descripcion: 'Código de tropa (ej: B 2026 0100)' },
-    { variable: 'NUMERO', campo: 'animal.numero', descripcion: 'Número de animal (ej: 0015)' },
-    { variable: 'PESO', campo: 'animal.pesoVivo', descripcion: 'Peso vivo en kg (ej: 450)' }
+    { variable: 'TROPA', campo: 'tropa.codigo', descripcion: 'Codigo de tropa' },
+    { variable: 'NUMERO', campo: 'animal.numero', descripcion: 'Numero de animal' },
+    { variable: 'PESO_KG', campo: 'animal.pesoVivo', descripcion: 'Peso vivo en kg' },
+    { variable: 'CODIGO_BARRAS', campo: 'animal.codigo', descripcion: 'Codigo de barras' },
+    { variable: 'TIPO', campo: 'animal.tipoAnimal', descripcion: 'Tipo de animal' },
+    { variable: 'FECHA', campo: 'fecha', descripcion: 'Fecha de medicion' }
   ])
 
   // Crear o actualizar el rótulo
   const rotulo = await prisma.rotulo.upsert({
     where: { codigo: 'PESAJE_INDIVIDUAL_DEFAULT' },
     update: {
-      nombre: 'Rótulo Pesaje Individual - Datamax',
+      nombre: 'Rótulo Pesaje Individual - Zebra 90x60',
       tipo: TipoRotulo.PESAJE_INDIVIDUAL,
-      tipoImpresora: 'DATAMAX',
-      modeloImpresora: 'MARK_II',
-      ancho: 100,  // 10cm
-      alto: 50,    // 5cm
-      dpi: 203,
-      contenido: contenidoDPL,
+      tipoImpresora: 'ZEBRA',
+      ancho: 90,   // 90mm
+      alto: 60,    // 60mm
+      dpi: 200,
+      contenido: contenidoZPL,
       variables: variables,
       activo: true,
       esDefault: true,
-      diasConsumo: 30,
-      temperaturaMax: 5.0
+      categoria: 'PESAJE_INDIVIDUAL'
     },
     create: {
       codigo: 'PESAJE_INDIVIDUAL_DEFAULT',
-      nombre: 'Rótulo Pesaje Individual - Datamax',
+      nombre: 'Rótulo Pesaje Individual - Zebra 90x60',
       tipo: TipoRotulo.PESAJE_INDIVIDUAL,
-      tipoImpresora: 'DATAMAX',
-      modeloImpresora: 'MARK_II',
-      ancho: 100,  // 10cm
-      alto: 50,    // 5cm
-      dpi: 203,
-      contenido: contenidoDPL,
+      tipoImpresora: 'ZEBRA',
+      ancho: 90,   // 90mm
+      alto: 60,    // 60mm
+      dpi: 200,
+      contenido: contenidoZPL,
       variables: variables,
       activo: true,
       esDefault: true,
-      diasConsumo: 30,
-      temperaturaMax: 5.0
+      categoria: 'PESAJE_INDIVIDUAL'
     }
   })
 
-  console.log('✅ Rótulo creado/actualizado:', rotulo.id)
-  console.log('   - Tipo:', rotulo.tipo)
-  console.log('   - Impresora:', rotulo.tipoImpresora, rotulo.modeloImpresora)
-  console.log('   - Tamaño:', rotulo.ancho + 'mm x ' + rotulo.alto + 'mm')
-  console.log('   - DPI:', rotulo.dpi)
+  console.log('Rótulo creado/actualizado:', rotulo.id)
+  console.log('   Nombre:', rotulo.nombre)
+  console.log('   Tipo:', rotulo.tipo)
+  console.log('   Impresora:', rotulo.tipoImpresora)
+  console.log('   Tamaño:', rotulo.ancho + 'mm x ' + rotulo.alto + 'mm')
+  console.log('   DPI:', rotulo.dpi)
   console.log('')
-  console.log('Contenido DPL:')
-  console.log(contenidoDPL)
-  console.log('')
-  console.log('Variables disponibles:', variables)
+  console.log('Contenido ZPL:')
+  console.log(contenidoZPL)
 }
 
 main()

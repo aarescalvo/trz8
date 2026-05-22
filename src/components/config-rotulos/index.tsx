@@ -179,6 +179,7 @@ export function ConfigRotulosModule({ operador, modoEditor: modoEditorProp, onVo
     'NUMERO_CARAVANA': '1234567890',
     'PESO': '125.5',
     'KG': '125.5',
+    'PESO_KG': '450',
     'LADO': 'IZQ',
     'SIGLA': 'A',
     'CLASIFICACION': 'A',
